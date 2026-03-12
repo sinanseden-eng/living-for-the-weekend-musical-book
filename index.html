@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hard-Fi: Living For The Weekend - Comic</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&family=Pinyon+Script&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        .font-comic { font-family: 'Comic Neue', cursive; }
+        .font-bangers { font-family: 'Bangers', cursive; }
+        .font-signature { font-family: 'Pinyon Script', cursive; }
+        .perspective-1000 { perspective: 1000px; }
+        .animate-bounce-slow { animation: bounce 3s infinite; }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(0); }
+        }
+        
+        /* Custom scrollbar for lyrics */
+        .lyrics-scroll::-webkit-scrollbar { width: 6px; }
+        .lyrics-scroll::-webkit-scrollbar-track { background: transparent; }
+        .lyrics-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .lyrics-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .comic-panel {
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.8);
+            border: 3px solid black;
+        }
+        
+        @media (min-width: 640px) {
+            .comic-panel {
+                box-shadow: 10px 10px 0px rgba(0,0,0,0.8);
+                border: 4px solid black;
+            }
+        }
+
+        .smooth-scroll {
+            scroll-behavior: smooth;
+        }
+
+        /* Range Slider Styling for Debugger */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #22c55e;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #374151;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS ---
+        const Icon = ({ children, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+        const ChevronLeft = (props) => <Icon {...props}><path d="m15 18-6-6 6-6"/></Icon>;
+        const ChevronRight = (props) => <Icon {...props}><path d="m9 18 6-6-6-6"/></Icon>;
+        const ChevronDown = (props) => <Icon {...props}><path d="m6 9 6 6 6-6"/></Icon>;
+        const Play = (props) => <Icon {...props}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
+        const Pause = (props) => <Icon {...props}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></Icon>;
+        const Volume2 = (props) => <Icon {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></Icon>;
+        const VolumeX = (props) => <Icon {...props}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></Icon>;
+        const BookOpen = (props) => <Icon {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+        const Zap = (props) => <Icon {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+        const ZapOff = (props) => <Icon {...props}><polyline points="12.41 6.75 13 2 10.57 4.92"/><polyline points="18.57 12.91 21 10 15.66 10"/><polyline points="8 8 3 14 12 14 11 22 16 15.12"/><line x1="1" y1="1" x2="23" y2="23"/></Icon>;
+        const Maximize = (props) => <Icon {...props}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></Icon>;
+        const Minimize = (props) => <Icon {...props}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></Icon>;
+        const Upload = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Icon>;
+        const AlertCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>;
+        const Loader2 = (props) => <Icon {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></Icon>;
+        const Bug = (props) => <Icon {...props}><rect width="8" height="14" x="8" y="6" rx="4"/><path d="m19 7-3 2"/><path d="m5 7 3 2"/><path d="m19 19-3-2"/><path d="m5 19 3-2"/><path d="M20 13h-4"/><path d="M4 13h4"/><path d="m10 4 1 2"/><path d="m14 4-1 2"/></Icon>;
+
+        // --- DATA ---
+        const REPO_BASE_URL = "https://raw.githubusercontent.com/sinanseden-eng/living-for-the-weekend-musical-book/main/";
+        const CACHE_BUSTER = "?v=13";
+
+        // UPDATED: Now looks for .png files instead of .jpg
+        const pages = [
+            {
+                id: 1,
+                type: "intro",
+                text: "LIVING FOR THE WEEKEND",
+                subtext: "Hard-Fi Interactive Comic",
+                image: `${REPO_BASE_URL}1.png${CACHE_BUSTER}`,
+                bgColor: "bg-slate-950",
+                timestamp: 0 
+            },
+            {
+                id: 2,
+                lyrics: "Oh, I've been working all week, I'm tired\nYeah, I've been working all week and I'm\nJust living for the weekend",
+                image: `${REPO_BASE_URL}2.png${CACHE_BUSTER}`, 
+                bgColor: "bg-slate-800",
+                timestamp: 29, 
+                noScroll: true 
+            },
+            {
+                id: 3,
+                lyrics: "Hey hey\nGot some money, I just got paid\nGot some money and I can't wait\nAt 6 o'clock, I'm out of here",
+                image: `${REPO_BASE_URL}3.png${CACHE_BUSTER}`,
+                bgColor: "bg-emerald-950",
+                timestamp: 43,
+                slowScroll: true
+            },
+            {
+                id: 4,
+                lyrics: "Out there tonight is the night of my life, got my name on\nRun down my street, Adidas on my feet\nI'm on fire",
+                image: `${REPO_BASE_URL}4.png${CACHE_BUSTER}`,
+                bgColor: "bg-pink-950",
+                timestamp: 59
+            },
+            {
+                id: 5,
+                lyrics: "Working all the time, work is such a bind\nGot some money to spend, living for the weekend\nWhen it gets too much, I live for the rush\nGot some money to spend, living for the weekend",
+                image: `${REPO_BASE_URL}5.png${CACHE_BUSTER}`,
+                bgColor: "bg-fuchsia-900",
+                timestamp: 72
+            },
+            {
+                id: 6,
+                lyrics: "Oh man!\nYeah, I've been working all week, I'm shot\nYeah, I've been working all week, for what?\nJust living for the weekend",
+                image: `${REPO_BASE_URL}6.png${CACHE_BUSTER}`,
+                bgColor: "bg-amber-900",
+                timestamp: 88,
+                slowScroll: true
+            },
+            {
+                id: 7,
+                lyrics: "Ah shit!\nSo my clothes are all counterfeit\nSo my name isn't on the list\n\"No you can't come in, so go home boys!\"",
+                image: `${REPO_BASE_URL}7.png${CACHE_BUSTER}`,
+                bgColor: "bg-zinc-900",
+                timestamp: 103,
+                slowScroll: true
+            },
+            {
+                id: 8,
+                lyrics: "Slip round the back look at that, there's a cracked toilet window\nDrop to the floor\nCovers us through the door\nI'm on fire",
+                image: `${REPO_BASE_URL}8.png${CACHE_BUSTER}`,
+                bgColor: "bg-orange-800",
+                timestamp: 118,
+                superSlowScroll: true
+            },
+            {
+                id: 9,
+                lyrics: "Working all the time, work is such a bind\nGot some money to spend, living for the weekend\nWhen it gets too much, I live for the rush\nGot some money to spend, living for the weekend",
+                image: `${REPO_BASE_URL}9.png${CACHE_BUSTER}`,
+                bgColor: "bg-emerald-900",
+                timestamp: 131,
+                superSlowScroll: true
+            },
+            {
+                id: 10,
+                lyrics: "Can you feel it?\nFeel the pressure... rising\nPushing down on me, oh lord!\n\nPressure, pressure\nPressure pressure pressure\nFeel the pressure, pressure\nPressure, pressure pressure",
+                image: `${REPO_BASE_URL}10.png${CACHE_BUSTER}`,
+                bgColor: "bg-amber-700",
+                timestamp: 149,
+                slowScroll: true
+            },
+            {
+                id: 11,
+                lyrics: "Living for the weekend\nLiving for the weekend\nLiving for the weekend\nLiving for the weekend\nLiving for the weekend\nLiving for the weekend\nLiving for the weekend\nLiving for the weekend",
+                image: `${REPO_BASE_URL}11.png${CACHE_BUSTER}`,
+                bgColor: "bg-fuchsia-950",
+                timestamp: 173
+            },
+            {
+                id: 12,
+                lyrics: "Going out tonight, going out tonight\nBaby you and I are going out tonight\nGoing out tonight, going out tonight\nBaby you and I are going out tonight\nGoing out tonight, going out tonight\nBaby you and I are going out tonight\nGoing out tonight, going out tonight\nBaby you and I are going out tonight",
+                image: `${REPO_BASE_URL}12.png${CACHE_BUSTER}`,
+                bgColor: "bg-blue-950",
+                timestamp: 191
+            }
+        ];
+
+        // Helper to format time as M:SS
+        const formatTime = (seconds) => {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        };
+
+        // --- APP ---
+        const ComicReader = () => {
+            const [currentPage, setCurrentPage] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [isMuted, setIsMuted] = useState(false);
+            const [audioStatus, setAudioStatus] = useState('idle');
+            const [autoFlip, setAutoFlip] = useState(true);
+            const [isImmersive, setIsImmersive] = useState(false);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [customAudioUrl, setCustomAudioUrl] = useState(null);
+            
+            const [showDebug, setShowDebug] = useState(true);
+            
+            const audioRef = useRef(null);
+            const lyricScrollRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            const totalPages = pages.length;
+            const defaultAudioUrl = "https://raw.githubusercontent.com/sinanseden-eng/living-for-the-weekend-musical-book/main/hardfi_weekend.mp3?v=12";
+            const activeAudioUrl = customAudioUrl || defaultAudioUrl;
+
+            const toggleImmersive = async () => {
+                if (!document.fullscreenElement) {
+                    try {
+                        await document.documentElement.requestFullscreen();
+                        setIsImmersive(true);
+                    } catch (err) {
+                        console.error("Fullscreen API error:", err);
+                        setIsImmersive(true); 
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    }
+                    setIsImmersive(false);
+                }
+            };
+
+            useEffect(() => {
+                const handleFullscreenChange = () => {
+                    setIsImmersive(!!document.fullscreenElement);
+                };
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            }, []);
+
+            const togglePlay = () => {
+                if (audioRef.current) {
+                    if (isPlaying) {
+                        audioRef.current.pause();
+                    } else {
+                        audioRef.current.play().catch(e => setAudioStatus('error'));
+                    }
+                    setIsPlaying(!isPlaying);
+                }
+            };
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    setCustomAudioUrl(url);
+                    setAudioStatus('loading'); 
+                    setIsPlaying(false);
+                }
+            };
+
+            const triggerFileUpload = () => {
+                fileInputRef.current?.click();
+            };
+
+            const nextPage = () => currentPage < totalPages - 1 && setCurrentPage(currentPage + 1);
+            const prevPage = () => currentPage > 0 && setCurrentPage(currentPage - 1);
+
+            const handleTimeUpdate = () => {
+                if (!audioRef.current) return;
+                const time = audioRef.current.currentTime;
+                setCurrentTime(time);
+                if (!autoFlip) return;
+                
+                let activeIndex = 0;
+                for (let i = 0; i < pages.length; i++) {
+                    if (time >= pages[i].timestamp) activeIndex = i;
+                    else break;
+                }
+                if (activeIndex !== currentPage) setCurrentPage(activeIndex);
+            };
+
+            const handleScrub = (e) => {
+                const newTime = parseFloat(e.target.value);
+                if (audioRef.current) {
+                    audioRef.current.currentTime = newTime;
+                    setCurrentTime(newTime);
+                }
+            };
+
+            useEffect(() => {
+                const container = lyricScrollRef.current;
+                if (!container) return;
+                
+                const currentData = pages[currentPage];
+                
+                if (currentData.noScroll) {
+                    container.scrollTop = 0;
+                    return;
+                }
+
+                const nextData = pages[currentPage + 1];
+                const startTime = currentData.timestamp;
+                const endTime = nextData ? nextData.timestamp : (audioRef.current?.duration || startTime + 15);
+                
+                const durationElapsed = endTime - startTime;
+                const elapsed = currentTime - startTime;
+                
+                if (elapsed >= 0 && durationElapsed > 0) {
+                    let progress = elapsed / durationElapsed;
+                    if (currentData.superSlowScroll) progress = Math.pow(progress, 2.2); 
+                    else if (currentData.slowScroll) progress = Math.pow(progress, 1.4); 
+                    const maxScroll = container.scrollHeight - container.clientHeight;
+                    if (maxScroll > 0) container.scrollTop = maxScroll * progress;
+                }
+            }, [currentTime, currentPage]);
+
+            useEffect(() => {
+                if (audioRef.current && activeAudioUrl) {
+                    const target = pages[currentPage].timestamp || 0;
+                    if (Math.abs(audioRef.current.currentTime - target) > 3) {
+                        audioRef.current.currentTime = target;
+                    }
+                }
+            }, [currentPage, activeAudioUrl]);
+
+            const currentData = pages[currentPage];
+
+            return (
+                <div className="flex flex-col h-[100dvh] bg-gray-950 text-white font-sans overflow-hidden relative">
+                    
+                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="audio/*" className="hidden" />
+
+                    <audio 
+                        ref={audioRef} 
+                        loop 
+                        preload="auto" 
+                        src={activeAudioUrl}
+                        onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={(e) => setDuration(e.target.duration)}
+                        onCanPlay={() => setAudioStatus('ready')}
+                        onError={() => setAudioStatus(activeAudioUrl ? 'error' : 'idle')}
+                    />
+
+                    {/* DEBUGGER OVERLAY */}
+                    {showDebug && (
+                        <div className="absolute top-20 right-4 w-72 z-50 bg-gray-900 border border-green-500 shadow-2xl rounded-xl overflow-hidden animate-in slide-in-from-top-4">
+                            <div className="bg-green-600/20 px-4 py-2 border-b border-green-500/50 flex items-center justify-between">
+                                <h3 className="font-bold text-green-400 flex items-center gap-2 text-sm"><Bug size={16}/> Sync Debugger</h3>
+                                <button onClick={() => setShowDebug(false)} className="text-gray-400 hover:text-white">&times;</button>
+                            </div>
+                            
+                            <div className="p-4 space-y-4 font-mono text-xs">
+                                <div className="flex items-center justify-between text-white text-lg">
+                                    <span className="font-bold text-green-400">{formatTime(currentTime)}</span>
+                                    <span className="text-gray-500 text-sm">/ {formatTime(duration)}</span>
+                                </div>
+                                <div>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max={duration || 100} 
+                                        value={currentTime} 
+                                        onChange={handleScrub}
+                                    />
+                                </div>
+                                <div className="space-y-2 pt-2 border-t border-gray-700">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Current Panel:</span> 
+                                        <span className="text-white">#{currentPage + 1}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400">Triggered At:</span> 
+                                        <span className="text-yellow-400">{formatTime(currentData.timestamp)} ({currentData.timestamp}s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Header */}
+                    <header className={`h-14 sm:h-16 shrink-0 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-2 sm:px-4 z-40 transition-transform duration-300 ease-in-out ${isImmersive ? '-translate-y-full absolute top-0 w-full' : 'translate-y-0 relative'}`}>
+                        <div className="flex items-center space-x-2 text-pink-500 shrink-0">
+                            <BookOpen size={20} className="sm:w-6 sm:h-6" />
+                            <div className="hidden sm:flex flex-col mt-1">
+                                <span className="font-bangers text-xl sm:text-2xl tracking-widest leading-none">WORKING CLASS</span>
+                                <span className="font-comic text-[9px] sm:text-[10px] text-pink-300 tracking-wider leading-none uppercase mt-0.5">Struggles Through Time</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 flex justify-center max-w-lg mx-2">
+                            <div className="flex items-center gap-2 sm:gap-4 bg-black/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-gray-800 shadow-inner w-full justify-between">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <button onClick={triggerFileUpload} className="text-blue-400 hover:text-white p-1 hover:bg-blue-600/20 rounded-full transition-all shrink-0"><Upload size={18} /></button>
+                                    <div className="flex flex-col overflow-hidden w-[90px] sm:w-[120px]">
+                                        <span className="text-xs sm:text-sm font-medium truncate text-white/90">{customAudioUrl ? "Local MP3 Loaded" : "Hard-Fi Loaded"}</span>
+                                        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider">
+                                            {audioStatus === 'ready' && <span className="text-green-400">Ready</span>}
+                                            {audioStatus === 'error' && <span className="text-red-400">Error</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1 sm:gap-2 border-l border-gray-700 pl-2">
+                                    <button onClick={toggleImmersive} className="p-1 text-gray-400 hover:text-white transition-colors hidden sm:block"><Maximize size={18}/></button>
+                                    <button onClick={() => setAutoFlip(!autoFlip)} className={`p-1 ${autoFlip ? 'text-green-500' : 'text-gray-500'} hidden sm:block`}><Zap size={18}/></button>
+                                    <button onClick={togglePlay} className="text-white hover:text-pink-500 transition-colors px-1">
+                                        {isPlaying ? <Pause size={22} /> : <Play size={22} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => setShowDebug(!showDebug)} className={`p-1 rounded ${showDebug ? 'text-green-400 bg-green-900/30' : 'text-gray-600 hover:text-white'} transition-colors`}><Bug size={16}/></button>
+                            <div className="text-xs sm:text-sm font-mono text-gray-500 w-8 sm:w-12 text-right">{currentPage + 1}/{totalPages}</div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="flex-1 min-h-0 relative flex items-center justify-center p-2 sm:p-4 w-full">
+                        <button onClick={prevPage} className="absolute left-2 sm:left-4 z-30 p-1 sm:p-2 bg-black/50 text-white/50 hover:text-white rounded-full hover:bg-pink-500 transition-colors"><ChevronLeft size={28}/></button>
+                        <button onClick={nextPage} className="absolute right-2 sm:right-4 z-30 p-1 sm:p-2 bg-black/50 text-white/50 hover:text-white rounded-full hover:bg-pink-500 transition-colors"><ChevronRight size={28}/></button>
+
+                        <div className="w-full max-w-5xl h-full flex flex-col items-center justify-center">
+                            <div key={currentPage} className={`comic-panel relative w-full h-full bg-white flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-500 rounded-lg sm:rounded-none`}>
+                                <div className={`flex-1 relative overflow-hidden ${currentData.bgColor || 'bg-gray-200'} flex items-center justify-center w-full min-h-0`}>
+                                    {currentData.image && <img src={currentData.image} className="w-full h-full transition-all duration-300 object-contain" alt="Comic Panel" />}
+                                    {currentData.type === 'intro' && (
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-transparent flex flex-col items-center justify-start pt-12 sm:pt-20 p-4 text-center pointer-events-none">
+                                            <h1 className="text-5xl sm:text-7xl font-black text-pink-500 font-bangers tracking-tighter transform -rotate-3 mb-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">LIVING FOR THE</h1>
+                                            <h1 className="text-5xl sm:text-7xl font-black text-white font-bangers tracking-tighter transform rotate-2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">WEEKEND</h1>
+                                        </div>
+                                    )}
+                                </div>
+                                {currentData.type !== 'intro' && (
+                                    <div className="shrink-0 bg-white border-t-2 sm:border-t-4 border-black p-2 sm:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden h-[35%] min-h-[90px] max-h-[180px]">
+                                        <div ref={lyricScrollRef} className="lyrics-scroll overflow-y-auto w-full px-2 sm:px-4 h-full smooth-scroll no-scrollbar">
+                                            <div className="font-comic text-black text-base sm:text-xl md:text-2xl font-bold py-1 sm:py-4">
+                                                {currentData.lyrics.split('\n').map((line, i) => <p key={i} className="mb-1 sm:mb-2">{line}</p>)}
+                                                {!currentData.noScroll && <div className="h-24 sm:h-40"></div>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="absolute bottom-2 right-4 sm:bottom-4 sm:right-6 font-signature text-2xl sm:text-4xl text-black/40 pointer-events-none">Sinan</div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ComicReader />);
+    </script>
+</body>
+</html>
